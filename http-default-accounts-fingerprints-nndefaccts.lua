@@ -6214,6 +6214,43 @@ table.insert(fingerprints, {
 })
 
 table.insert(fingerprints, {
+  name = "Ruckus Wireless Admin",
+  category = "routers",
+  paths = {
+    {path = "/login.asp"}
+  },
+  target_check = function (host, port, path, response)
+    return response.status == 200
+           and response.body
+           and response.body:find("Ruckus Wireless Admin", 1, true)
+           and response.body:lower():find("<title>ruckus wireless admin</title>")
+           and get_tag(response.body, "form", {action="/forms/doLogin$"})
+  end,
+  login_combos = {
+    {username = "admin", password = "password"},
+    {username = "super", password = "sp-admin"}
+  },
+  login_check = function (host, port, path, user, pass)
+    local form = {login_username=user,
+                  password = pass,
+                  x="0",
+                  y="0"}
+    local resp = http_post_simple(host, port,
+                                 url.absolute(path, "/forms/doLogin"),
+                                 nil, form)
+    if not (resp.status == 302
+           and (resp.header["location"] or ""):find("/index%.%l+$")) then
+      return false
+    end
+    if not get_cookie(resp, "sid", "^%d+$") then
+      http_post_simple(host, port, url.absolute(path, "/forms/doLogout"),
+                      nil, {x="0", y="0"})
+    end
+    return true
+  end
+})
+
+table.insert(fingerprints, {
   name = "Ruckus ZoneDirector 9.x",
   cpe = "cpe:/o:ruckus:zonedirector_firmware",
   category = "routers",
